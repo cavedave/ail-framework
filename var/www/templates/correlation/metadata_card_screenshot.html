@@ -55,7 +55,7 @@
 										</div>
 									</div>
 								</div>
-                                {% with ollama_description=dict_object['metadata']['description'], image_gid=dict_object['gid'], image_phash=meta.get('image_phash'), image_clip_embedding=meta.get('image_clip_embedding'), image_clip_dim=meta.get('image_clip_dim'), image_clip_features=meta.get('image_clip_features'), ai_detector=meta.get('ai_detector'), meta_data=meta.get('meta_data') %}
+                                {% with ollama_description=dict_object['metadata']['description'], image_gid=dict_object['gid'], image_phash=meta.get('image_phash'), image_clip_embedding=meta.get('image_clip_embedding'), image_clip_dim=meta.get('image_clip_dim'), image_clip_features=meta.get('image_clip_features'), ai_detector=meta.get('ai_detector'), meta_data=meta.get('meta_data'), meta_data_full_length=meta.get('meta_data_full_length') %}
                                     {% include 'block_img_ollama.html' %}
                                 {% endwith %}
 								<canvas id="canvas" style="width:100%;"></canvas>

@@ -92,9 +92,16 @@ def load_image(image_path):
     print(f"Setting date to: {current_date}")
     image.add(current_date, None)  # None because it's not associated with a message/item
     
+    # Ensure image is in image:all set (even if it already existed)
+    # This fixes the case where metadata exists but image wasn't in the set
+    from lib.ConfigLoader import ConfigLoader
+    config = ConfigLoader()
+    r_object = config.get_db_conn("Kvrocks_Objects")
+    r_object.sadd('image:all', image.id)
+    
     # Check if image already existed
     if image.exists():
-        print("Image already exists in AIL (date updated)")
+        print("Image already exists in AIL (date updated, ensured in image:all set)")
     else:
         print("New image added to AIL")
     

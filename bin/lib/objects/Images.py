@@ -14,10 +14,12 @@ from pymisp import MISPObject
 
 try:
     from PIL import Image as PILImage
+    from PIL.ExifTags import TAGS
     import imagehash
     IMAGEHASH_AVAILABLE = True
 except ImportError:
     IMAGEHASH_AVAILABLE = False
+    TAGS = None
 
 try:
     import open_clip
@@ -429,6 +431,110 @@ class Image(AbstractDaterangeObject):
                    if score >= CLIP_FEATURE_THRESHOLD}
         return None
 
+    def calculate_exif_data(self):
+        """
+        Calculate EXIF metadata for the image.
+        
+        Note: Similar EXIF extraction logic exists in bin/modules/Exif.py, but that module
+        only logs EXIF data and doesn't store it. This implementation:
+        - Stores EXIF data in the database for later retrieval
+        - Handles value conversion (tuples, bytes, etc.) to strings
+        - Returns structured data for UI display
+        - Uses proper file handling with context managers
+        
+        Returns:
+            dict: Dictionary mapping EXIF tag names to values,
+                  or None if EXIF is unavailable or no EXIF data exists
+        """
+        if not IMAGEHASH_AVAILABLE or TAGS is None:
+            return None
+        
+        if not self.exists():
+            return None
+        
+        try:
+            filepath = self.get_filepath()
+            # Use context manager to ensure file is properly closed
+            with PILImage.open(filepath) as img:
+                # Try _getexif() first (often returns more complete data, especially for MPO format)
+                exif_data = None
+                if hasattr(img, '_getexif'):
+                    exif_data = img._getexif()
+                
+                # If _getexif() doesn't work or returns None, try getexif() (PIL 8.0+)
+                if not exif_data:
+                    exif_data = img.getexif()
+                    # getexif() returns an Exif object, convert to dict if needed
+                    if exif_data and hasattr(exif_data, 'items'):
+                        # It's already iterable, but check if it has data
+                        if len(exif_data) == 0:
+                            exif_data = None
+                
+                # Last resort: check img.info['exif'] (raw EXIF bytes)
+                if not exif_data and hasattr(img, 'info') and img.info and 'exif' in img.info:
+                    # Try to parse raw EXIF bytes
+                    try:
+                        from PIL.ExifTags import TAGS as EXIF_TAGS
+                        # This is raw bytes, would need piexif or similar to parse
+                        # For now, just note that EXIF exists but we can't parse it easily
+                        pass
+                    except:
+                        pass
+                
+                # Check if we have any EXIF data
+                if not exif_data or (hasattr(exif_data, '__len__') and len(exif_data) == 0):
+                    return None
+                
+                # Convert EXIF data to readable format
+                exif_dict = {}
+                for tag_id, value in exif_data.items():
+                    # Get human-readable tag name
+                    tag_name = TAGS.get(tag_id, tag_id)
+                    
+                    # Convert value to string if it's not already
+                    # Some EXIF values are tuples or other complex types
+                    try:
+                        if isinstance(value, (tuple, list)):
+                            value = str(value)
+                        elif isinstance(value, bytes):
+                            value = value.decode('utf-8', errors='ignore')
+                        else:
+                            value = str(value)
+                        exif_dict[tag_name] = value
+                    except Exception:
+                        # Skip values that can't be converted
+                        continue
+                
+                return exif_dict if exif_dict else None
+                
+        except Exception as e:
+            self.logger.warning(f"Failed to calculate EXIF data for image {self.id}: {e}")
+            return None
+
+    def get_exif_data(self):
+        """
+        Get EXIF metadata, calculating if not stored.
+        
+        Returns:
+            dict: Dictionary mapping EXIF tag names to values,
+                  or None if unavailable
+        """
+        # Try to get from cache
+        exif_json = self._get_field('exif_data')
+        if exif_json:
+            try:
+                return json.loads(exif_json)
+            except (json.JSONDecodeError, TypeError):
+                # If stored value is invalid, recalculate
+                pass
+        
+        # Calculate and store if not exists
+        exif_data = self.calculate_exif_data()
+        if exif_data:
+            # Store as JSON string
+            self._set_field('exif_data', json.dumps(exif_data))
+        return exif_data
+
     def get_search_document(self):
         global_id = self.get_global_id()
         content = self.get_description()
@@ -467,8 +573,7 @@ class Image(AbstractDaterangeObject):
             # TODO: AI Detector - not implemented yet
             meta['ai_detector'] = None
         if 'meta_data' in options or 'all' in options:
-            # TODO: Meta data - not implemented yet
-            meta['meta_data'] = None
+            meta['meta_data'] = self.get_exif_data()
         if 'tags_safe' in options:
             meta['tags_safe'] = self.is_tags_safe(meta['tags'])
         return meta

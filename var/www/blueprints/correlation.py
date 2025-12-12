@@ -180,9 +180,26 @@ def show_correlation():
                                 dict_object["metadata_card"]['image_clip_features'] = None
                     except:
                         dict_object["metadata_card"]['image_clip_features'] = None
-                    # Placeholder fields (TODO: not implemented yet)
+                    # Placeholder fields
                     dict_object["metadata_card"]['ai_detector'] = None
-                    dict_object["metadata_card"]['meta_data'] = None
+                    # Get EXIF metadata if available
+                    try:
+                        if hasattr(img, 'get_exif_data'):
+                            exif_data = img.get_exif_data()
+                            if exif_data:
+                                # Format as string for display (first 200 chars)
+                                exif_str = ', '.join([f"{k}: {v}" for k, v in exif_data.items()])
+                                dict_object["metadata_card"]['meta_data'] = exif_str[:200] if len(exif_str) > 200 else exif_str
+                                dict_object["metadata_card"]['meta_data_full_length'] = len(exif_str)
+                            else:
+                                dict_object["metadata_card"]['meta_data'] = None
+                                dict_object["metadata_card"]['meta_data_full_length'] = None
+                        else:
+                            dict_object["metadata_card"]['meta_data'] = None
+                            dict_object["metadata_card"]['meta_data_full_length'] = None
+                    except:
+                        dict_object["metadata_card"]['meta_data'] = None
+                        dict_object["metadata_card"]['meta_data_full_length'] = None
 
             return render_template("show_correlation.html", dict_object=dict_object, bootstrap_label=bootstrap_label,
                                    tags_selector_data=Tag.get_tags_selector_data(),

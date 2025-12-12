@@ -126,9 +126,26 @@ def showItem():  # # TODO: support post
                         meta['image_clip_features'] = None
             except:
                 meta['image_clip_features'] = None
-            # Placeholder fields (TODO: not implemented yet)
+            # Placeholder fields
             meta['ai_detector'] = None
-            meta['meta_data'] = None
+            # Get EXIF metadata if available
+            try:
+                if hasattr(img, 'get_exif_data'):
+                    exif_data = img.get_exif_data()
+                    if exif_data:
+                        # Format as string for display (first 200 chars)
+                        exif_str = ', '.join([f"{k}: {v}" for k, v in exif_data.items()])
+                        meta['meta_data'] = exif_str[:200] if len(exif_str) > 200 else exif_str
+                        meta['meta_data_full_length'] = len(exif_str)
+                    else:
+                        meta['meta_data'] = None
+                        meta['meta_data_full_length'] = None
+                else:
+                    meta['meta_data'] = None
+                    meta['meta_data_full_length'] = None
+            except:
+                meta['meta_data'] = None
+                meta['meta_data_full_length'] = None
 
     if meta.get('investigations'):
         invests = []

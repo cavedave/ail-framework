@@ -81,7 +81,14 @@
                     <strong>Meta<br>Data:</strong>
                 </div>
                 <div class="col-9">
-                    <span class="text-muted">Not implemented yet</span>
+                    {% if meta_data %}
+                        <code>{{ meta_data }}{% if meta_data_full_length and meta_data_full_length > 200 %}...{% endif %}</code>
+                        {% if meta_data_full_length and meta_data_full_length > 200 %}
+                            <small class="text-muted"> (truncated, {{ meta_data_full_length }} chars total)</small>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-muted">No EXIF data available</span>
+                    {% endif %}
                 </div>
             </div>
         </div>
