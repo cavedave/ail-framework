@@ -90,6 +90,10 @@ ail_typo_squatting
 # OCR
 easyocr
 
+# CLIP (optional - for image embeddings)
+open-clip-torch>=2.20.0
+torch>=2.0.0
+
 # Qrcode
 qreader
 pyzbar

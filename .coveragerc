@@ -1,0 +1,38 @@
+[run]
+# Exclude utility scripts and non-core code from coverage
+omit =
+    # Utility scripts (not part of core AIL)
+    tools/*
+    # Test files
+    tests/*
+    # Update scripts
+    update/*
+    # Other installers
+    other_installers/*
+    # Configuration files
+    configs/*
+    # Documentation
+    doc/*
+    # Build/install scripts
+    *.sh
+    install*.sh
+    setup.sh
+    # Python cache
+    */__pycache__/*
+    */site-packages/*
+    # Virtual environment
+    AILENV/*
+    venv/*
+    env/*
+
+[report]
+# Exclude the same patterns from reports
+exclude_lines =
+    # Utility script markers
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    @abstractmethod

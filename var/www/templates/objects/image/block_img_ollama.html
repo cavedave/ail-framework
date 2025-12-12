@@ -24,3 +24,66 @@
         </div>
     </div>
 {% endif %}
+
+{% if image_clip_embedding %}
+    <div class="card border-secondary mt-2">
+        <div class="card-body py-2">
+            <div class="row">
+                <div class="col-3">
+                    <strong>CLIP<br>Embedding:</strong>
+                </div>
+                <div class="col-9">
+                    <code>[{{ image_clip_embedding|join(', ') }}, ...]</code>
+                    <small class="text-muted"> ({{ image_clip_dim }}-dim vector)</small>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+{% if image_clip_features %}
+    <div class="card border-secondary mt-2">
+        <div class="card-body py-2">
+            <div class="row">
+                <div class="col-3">
+                    <strong>CLIP<br>Features:</strong>
+                </div>
+                <div class="col-9">
+                    {% for item, score in image_clip_features.items() %}
+                        <span class="badge bg-primary me-1">{{ item|title }} {{ "%.1f"|format(score) }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+{% if ai_detector is defined %}
+    <div class="card border-secondary mt-2">
+        <div class="card-body py-2">
+            <div class="row">
+                <div class="col-3">
+                    <strong>AI<br>Detector:</strong>
+                </div>
+                <div class="col-9">
+                    <span class="text-muted">Not implemented yet</span>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+{% if meta_data is defined %}
+    <div class="card border-secondary mt-2">
+        <div class="card-body py-2">
+            <div class="row">
+                <div class="col-3">
+                    <strong>Meta<br>Data:</strong>
+                </div>
+                <div class="col-9">
+                    <span class="text-muted">Not implemented yet</span>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}

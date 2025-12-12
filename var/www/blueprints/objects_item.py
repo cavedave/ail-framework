@@ -105,6 +105,30 @@ def showItem():  # # TODO: support post
                     meta['image_phash'] = img.get_phash()
             except:
                 meta['image_phash'] = None
+            # Get CLIP embedding if available
+            try:
+                if hasattr(img, 'get_clip_embedding'):
+                    clip_embedding = img.get_clip_embedding()
+                    if clip_embedding:
+                        # Store truncated version for display (first 5 elements)
+                        meta['image_clip_embedding'] = clip_embedding[:5] if len(clip_embedding) > 5 else clip_embedding
+                        meta['image_clip_dim'] = len(clip_embedding)
+            except:
+                meta['image_clip_embedding'] = None
+                meta['image_clip_dim'] = None
+            # Get CLIP features if available
+            try:
+                if hasattr(img, 'get_clip_features'):
+                    clip_features = img.get_clip_features()
+                    if clip_features:
+                        meta['image_clip_features'] = clip_features
+                    else:
+                        meta['image_clip_features'] = None
+            except:
+                meta['image_clip_features'] = None
+            # Placeholder fields (TODO: not implemented yet)
+            meta['ai_detector'] = None
+            meta['meta_data'] = None
 
     if meta.get('investigations'):
         invests = []

@@ -164,7 +164,16 @@ class Message(AbstractObject):
                 # Get phash from Image object
                 image_obj = Images.Image(obj_id)
                 image_phash = image_obj.get_phash() if image_obj.exists() else None
-                images.append({'id': obj_id, 'ocr': self._get_image_ocr(obj_id), 'description': image_description, 'phash': image_phash})
+                # Get CLIP embedding (truncated for display)
+                image_clip = None
+                if image_obj.exists():
+                    try:
+                        clip_embedding = image_obj.get_clip_embedding()
+                        if clip_embedding:
+                            image_clip = clip_embedding[:5] if len(clip_embedding) > 5 else clip_embedding
+                    except:
+                        pass
+                images.append({'id': obj_id, 'ocr': self._get_image_ocr(obj_id), 'description': image_description, 'phash': image_phash, 'clip_embedding': image_clip})
         return images
 
     def get_barcodes(self):

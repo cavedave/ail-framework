@@ -332,6 +332,168 @@ class TestScreenshotsPhash(unittest.TestCase):
         mock_get_phash.assert_called_once()
 
 
+class TestImagesClip(unittest.TestCase):
+    """Test CLIP embedding functionality for Images."""
+    
+    # What it tests: When CLIP embedding is already cached in database, get_clip_embedding() 
+    # should return it immediately without recalculating.
+    @patch('lib.objects.Images.Image.exists')
+    @patch('lib.objects.Images.Image._get_field')
+    @patch('lib.objects.Images.Image._set_field')
+    def test_get_clip_embedding_returns_cached_value(self, mock_set, mock_get_field, mock_exists):
+        """get_clip_embedding() should return cached value if available."""
+        import json
+        cached_embedding = [0.1, 0.2, 0.3, 0.4, 0.5] + [0.0] * 1019  # 1024-dim vector (ViT-H-14)
+        mock_get_field.return_value = json.dumps(cached_embedding)
+        
+        image = Images.Image('test123')
+        result = image.get_clip_embedding()
+        
+        self.assertEqual(result, cached_embedding)
+        self.assertEqual(len(result), 1024)
+        mock_set.assert_not_called()  # Should not recalculate
+    
+    # What it tests: When CLIP embedding is NOT cached, get_clip_embedding() should calculate it
+    # and store it in the database.
+    @patch('lib.objects.Images.Image.exists')
+    @patch('lib.objects.Images.Image.get_filepath')
+    @patch('lib.objects.Images.Image._get_field')
+    @patch('lib.objects.Images.Image._set_field')
+    @patch('lib.objects.Images.Image.calculate_clip_embedding')
+    @patch('lib.objects.Images.CLIP_AVAILABLE', True)
+    def test_get_clip_embedding_calculates_if_not_cached(self, mock_calculate, mock_set, mock_get_field, mock_filepath, mock_exists):
+        """get_clip_embedding() should calculate and cache if not stored."""
+        import json
+        mock_get_field.return_value = None  # No cached value
+        mock_exists.return_value = True
+        
+        # Mock calculated embedding (1024 dimensions - ViT-H-14)
+        calculated_embedding = [0.123, -0.456, 0.789] + [0.0] * 1021
+        mock_calculate.return_value = calculated_embedding
+        
+        image = Images.Image('test123')
+        result = image.get_clip_embedding()
+        
+        self.assertEqual(result, calculated_embedding)
+        self.assertEqual(len(result), 1024)
+        mock_set.assert_called_once_with('clip_embedding', json.dumps(calculated_embedding))
+    
+    # What it tests: When CLIP libraries are not installed, calculate_clip_embedding() should return None
+    # gracefully without crashing.
+    @patch('lib.objects.Images.Image.exists')
+    @patch('lib.objects.Images.CLIP_AVAILABLE', False)
+    def test_calculate_clip_embedding_returns_none_if_library_unavailable(self, mock_exists):
+        """calculate_clip_embedding() should return None if CLIP library not available."""
+        image = Images.Image('test123')
+        result = image.calculate_clip_embedding()
+        self.assertIsNone(result)
+    
+    # What it tests: When opening/reading the image file fails or CLIP model fails to load,
+    # calculate_clip_embedding() should catch the exception and return None gracefully.
+    @patch('lib.objects.Images.Image.exists')
+    @patch('lib.objects.Images.Image.get_filepath')
+    @patch('lib.objects.Images.CLIP_AVAILABLE', True)
+    @patch('lib.objects.Images._load_clip_model')
+    def test_calculate_clip_embedding_handles_exceptions(self, mock_load_model, mock_filepath, mock_exists):
+        """calculate_clip_embedding() should return None on exceptions."""
+        mock_exists.return_value = True
+        mock_filepath.return_value = '/path/to/image.png'
+        mock_load_model.return_value = (None, None, None)  # Model load failed
+        
+        image = Images.Image('test123')
+        result = image.calculate_clip_embedding()
+        self.assertIsNone(result)
+    
+    # What it tests: When metadata is requested with options={'clip_embedding'}, get_meta() should include
+    # the CLIP embedding in the returned metadata dictionary.
+    @patch('lib.objects.Images.Image.get_clip_embedding')
+    def test_get_meta_includes_clip_embedding_when_requested(self, mock_get_clip):
+        """get_meta() should include clip_embedding when 'clip_embedding' is in options."""
+        test_embedding = [0.1, 0.2, 0.3] + [0.0] * 1021  # 1024-dim vector
+        mock_get_clip.return_value = test_embedding
+        image = Images.Image('test123')
+        
+        with patch.object(image, '_get_meta', return_value={}):
+            with patch.object(image, 'get_tags', return_value=[]):
+                meta = image.get_meta(options={'clip_embedding'})
+        
+        self.assertIn('clip_embedding', meta)
+        self.assertEqual(meta['clip_embedding'], test_embedding)
+        mock_get_clip.assert_called_once()
+    
+    # What it tests: When requesting metadata with options={'all'}, clip_embedding should be included
+    # even though 'clip_embedding' is not explicitly in the options set.
+    @patch('lib.objects.Images.Image.get_clip_embedding')
+    def test_get_meta_includes_clip_embedding_when_all_requested(self, mock_get_clip):
+        """get_meta() should include clip_embedding when 'all' is in options."""
+        test_embedding = [0.1, 0.2, 0.3] + [0.0] * 1021  # 1024-dim vector
+        mock_get_clip.return_value = test_embedding
+        image = Images.Image('test123')
+        
+        with patch.object(image, '_get_meta', return_value={}):
+            with patch.object(image, 'get_tags', return_value=[]):
+                meta = image.get_meta(options={'all'})
+        
+        self.assertIn('clip_embedding', meta)
+        self.assertEqual(meta['clip_embedding'], test_embedding)
+        mock_get_clip.assert_called_once()
+    
+    # What it tests: When clip_embedding is NOT requested in options, get_meta() should NOT include it
+    # and should NOT call get_clip_embedding() (lazy loading - only calculate when needed).
+    @patch('lib.objects.Images.Image.get_clip_embedding')
+    def test_get_meta_excludes_clip_embedding_when_not_requested(self, mock_get_clip):
+        """get_meta() should not include clip_embedding when not requested."""
+        image = Images.Image('test123')
+        
+        with patch.object(image, '_get_meta', return_value={}):
+            with patch.object(image, 'get_tags', return_value=[]):
+                meta = image.get_meta(options={'description'})  # clip_embedding not requested
+        
+        self.assertNotIn('clip_embedding', meta)
+        mock_get_clip.assert_not_called()  # Should NOT calculate CLIP
+    
+    # What it tests: When calculate_clip_embedding() returns None, get_clip_embedding() should return None
+    # but NOT store None in the database (prevents database pollution).
+    @patch('lib.objects.Images.Image.exists')
+    @patch('lib.objects.Images.Image._get_field')
+    @patch('lib.objects.Images.Image._set_field')
+    @patch('lib.objects.Images.Image.calculate_clip_embedding')
+    @patch('lib.objects.Images.CLIP_AVAILABLE', True)
+    def test_get_clip_embedding_does_not_store_none_when_calculation_fails(self, mock_calculate, mock_set, mock_get_field, mock_exists):
+        """get_clip_embedding() should not store None when calculation fails."""
+        mock_get_field.return_value = None  # No cached value
+        mock_calculate.return_value = None  # Calculation failed
+        
+        image = Images.Image('test123')
+        result = image.get_clip_embedding()
+        
+        self.assertIsNone(result)
+        mock_set.assert_not_called()  # Should NOT store None
+    
+    # What it tests: When cached CLIP embedding is invalid JSON, get_clip_embedding() should
+    # recalculate instead of crashing.
+    @patch('lib.objects.Images.Image.exists')
+    @patch('lib.objects.Images.Image._get_field')
+    @patch('lib.objects.Images.Image._set_field')
+    @patch('lib.objects.Images.Image.calculate_clip_embedding')
+    @patch('lib.objects.Images.CLIP_AVAILABLE', True)
+    def test_get_clip_embedding_handles_invalid_json(self, mock_calculate, mock_set, mock_get_field, mock_exists):
+        """get_clip_embedding() should recalculate if cached value is invalid JSON."""
+        mock_get_field.return_value = 'invalid json!!!'  # Invalid JSON
+        mock_exists.return_value = True
+        
+        import json
+        recalculated_embedding = [0.1, 0.2, 0.3] + [0.0] * 1021  # 1024-dim vector
+        mock_calculate.return_value = recalculated_embedding
+        
+        image = Images.Image('test123')
+        result = image.get_clip_embedding()
+        
+        self.assertEqual(result, recalculated_embedding)
+        mock_calculate.assert_called_once()  # Should recalculate
+        mock_set.assert_called_once_with('clip_embedding', json.dumps(recalculated_embedding))
+
+
 if __name__ == '__main__':
     unittest.main()
 
