@@ -290,6 +290,10 @@ function launching_scripts {
     sleep 0.1
     screen -S "Script_AIL" -X screen -t "OcrExtractor" bash -c "cd ${AIL_BIN}/modules; ${ENV_PY} ./OcrExtractor.py; read x"
     sleep 0.1
+    screen -S "Script_AIL" -X screen -t "ImagePhash" bash -c "cd ${AIL_BIN}/modules; ${ENV_PY} ./ImagePhash.py; read x"
+    sleep 0.1
+    screen -S "Script_AIL" -X screen -t "PhashCorrelation" bash -c "cd ${AIL_BIN}/modules; ${ENV_PY} ./PhashCorrelation.py; read x"
+    sleep 0.1
     screen -S "Script_AIL" -X screen -t "CodeReader" bash -c "cd ${AIL_BIN}/modules; ${ENV_PY} ./CodeReader.py; read x"
     sleep 0.1
 

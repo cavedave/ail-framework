@@ -156,50 +156,24 @@ def show_correlation():
                             dict_object["metadata_card"]['image_phash'] = img.get_phash()
                     except:
                         dict_object["metadata_card"]['image_phash'] = None
-                    # Get CLIP embedding if available
+                    
+                    # Get similar images from correlations (created by PhashCorrelation module)
                     try:
-                        if hasattr(img, 'get_clip_embedding'):
-                            clip_embedding = img.get_clip_embedding()
-                            if clip_embedding:
-                                # Store truncated version for display (first 5 elements)
-                                dict_object["metadata_card"]['image_clip_embedding'] = clip_embedding[:5] if len(clip_embedding) > 5 else clip_embedding
-                                dict_object["metadata_card"]['image_clip_dim'] = len(clip_embedding)
-                            else:
-                                dict_object["metadata_card"]['image_clip_embedding'] = None
-                                dict_object["metadata_card"]['image_clip_dim'] = None
-                    except:
-                        dict_object["metadata_card"]['image_clip_embedding'] = None
-                        dict_object["metadata_card"]['image_clip_dim'] = None
-                    # Get CLIP features if available
-                    try:
-                        if hasattr(img, 'get_clip_features'):
-                            clip_features = img.get_clip_features()
-                            if clip_features:
-                                dict_object["metadata_card"]['image_clip_features'] = clip_features
-                            else:
-                                dict_object["metadata_card"]['image_clip_features'] = None
-                    except:
-                        dict_object["metadata_card"]['image_clip_features'] = None
-                    # Placeholder fields
-                    dict_object["metadata_card"]['ai_detector'] = None
-                    # Get EXIF metadata if available
-                    try:
-                        if hasattr(img, 'get_exif_data'):
-                            exif_data = img.get_exif_data()
-                            if exif_data:
-                                # Format as string for display (first 200 chars)
-                                exif_str = ', '.join([f"{k}: {v}" for k, v in exif_data.items()])
-                                dict_object["metadata_card"]['meta_data'] = exif_str[:200] if len(exif_str) > 200 else exif_str
-                                dict_object["metadata_card"]['meta_data_full_length'] = len(exif_str)
-                            else:
-                                dict_object["metadata_card"]['meta_data'] = None
-                                dict_object["metadata_card"]['meta_data_full_length'] = None
-                        else:
-                            dict_object["metadata_card"]['meta_data'] = None
-                            dict_object["metadata_card"]['meta_data_full_length'] = None
-                    except:
-                        dict_object["metadata_card"]['meta_data'] = None
-                        dict_object["metadata_card"]['meta_data_full_length'] = None
+                        correlations = img.get_correlation('image')
+                        similar_images_list = []
+                        if correlations and 'image' in correlations:
+                            for similar_str in correlations['image']:
+                                # Format: 'subtype:id' or just 'id' if no subtype
+                                if ':' in similar_str:
+                                    _, similar_id = similar_str.split(':', 1)
+                                else:
+                                    similar_id = similar_str
+                                similar_images_list.append({
+                                    'id': similar_id
+                                })
+                        dict_object["metadata_card"]['similar_images'] = similar_images_list
+                    except Exception as e:
+                        dict_object["metadata_card"]['similar_images'] = []
 
             return render_template("show_correlation.html", dict_object=dict_object, bootstrap_label=bootstrap_label,
                                    tags_selector_data=Tag.get_tags_selector_data(),
