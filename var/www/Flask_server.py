@@ -66,8 +66,11 @@ from blueprints.objects_barcode import objects_barcode
 from blueprints.objects_qrcode import objects_qrcode
 from blueprints.objects_favicon import objects_favicon
 from blueprints.objects_file_name import objects_file_name
+from blueprints.objects_pdf import objects_pdf
+from blueprints.objects_author import objects_author
 from blueprints.objects_ssh import objects_ssh
 from blueprints.objects_ip import objects_ip
+from blueprints.objects_phash import objects_phash
 from blueprints.api_rest import api_rest
 
 
@@ -130,7 +133,7 @@ if os.path.exists(self_signed_certfile) and os.path.exists(self_signed_keyfile):
 
 Flask_config.app = Flask(__name__, static_url_path=baseUrl+'/static/')
 app = Flask_config.app
-app.config['MAX_CONTENT_LENGTH'] = 900 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 2000 * 1024 * 1024
 
 # =========  BLUEPRINT  =========#
 app.register_blueprint(root, url_prefix=baseUrl)
@@ -164,8 +167,11 @@ app.register_blueprint(objects_barcode, url_prefix=baseUrl)
 app.register_blueprint(objects_qrcode, url_prefix=baseUrl)
 app.register_blueprint(objects_favicon, url_prefix=baseUrl)
 app.register_blueprint(objects_file_name, url_prefix=baseUrl)
+app.register_blueprint(objects_pdf, url_prefix=baseUrl)
+app.register_blueprint(objects_author, url_prefix=baseUrl)
 app.register_blueprint(objects_ssh, url_prefix=baseUrl)
 app.register_blueprint(objects_ip, url_prefix=baseUrl)
+app.register_blueprint(objects_phash, url_prefix=baseUrl)
 app.register_blueprint(search_b, url_prefix=baseUrl)
 app.register_blueprint(api_rest, url_prefix=baseUrl)
 
